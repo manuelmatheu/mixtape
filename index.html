@@ -166,7 +166,7 @@
     .track-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid rgba(26,18,8,0.06); transition: background 80ms; animation: fadeIn 200ms ease both; }
     .track-item:last-child { border-bottom: none; }
     .track-item:hover { background: var(--tape); }
-    .track-num { font-family: var(--font-m); font-size: 11px; opacity: 0.25; width: 22px; text-align: right; flex-shrink: 0; }
+    /* .track-num styles now handled by now-playing block above */
     .track-thumb { width: 36px; height: 36px; border-radius: 2px; object-fit: cover; background: var(--tape); flex-shrink: 0; }
     .track-info { flex: 1; min-width: 0; }
     .track-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -182,14 +182,29 @@
     /* Now-playing & click-to-play */
     .track-item { cursor: pointer; }
     .track-item:hover { background: var(--tape); }
-    .track-num-wrap { position: relative; width: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
-    .track-play-icon { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 11px; color: var(--ink); }
-    .track-item:hover .track-num { display: none; }
-    .track-item:hover .track-play-icon { display: flex; }
+    /* num-wrap is a fixed-size container — layout never shifts */
+    .track-num-wrap { position: relative; width: 22px; height: 20px; flex-shrink: 0; }
+    .track-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      font-family: var(--font-m); font-size: 11px;
+      color: var(--ink); opacity: 0.25;
+      transition: opacity 100ms;
+    }
+    .track-play-icon {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      font-size: 11px; color: var(--ink);
+      opacity: 0; transition: opacity 100ms;
+    }
+    /* hover: fade number out, play icon in */
+    .track-item:hover .track-num { opacity: 0; }
+    .track-item:hover .track-play-icon { opacity: 1; }
+    /* now-playing: rust highlight, play icon always visible */
     .track-item.now-playing { background: rgba(200,75,31,0.07); }
     .track-item.now-playing .track-name { color: var(--rust); }
-    .track-item.now-playing .track-num { display: none; }
-    .track-item.now-playing .track-play-icon { display: flex; color: var(--rust); }
+    .track-item.now-playing .track-num { opacity: 0; }
+    .track-item.now-playing .track-play-icon { opacity: 1; color: var(--rust); }
 
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(26,18,8,0.55); z-index: 200; display: none; align-items: center; justify-content: center; padding: 24px; backdrop-filter: blur(3px); }
