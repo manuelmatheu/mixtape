@@ -1,4 +1,4 @@
-// ── PKCE helpers ─────────────────────────────────────────────────────────────
+// ── PKCE helpers ──────────────────────────────────────────────────────────────
 function rndBytes(n) { const a = new Uint8Array(n); crypto.getRandomValues(a); return a; }
 function b64url(buf) { return btoa(String.fromCharCode(...buf)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
 async function sha256(s) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); }
@@ -72,7 +72,19 @@ async function getDevices() {
   } catch { return []; }
 }
 
+async function transferPlayback(deviceId) {
+  // Tell Spotify to make this device the active one
+  await fetch('https://api.spotify.com/v1/me/player', {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_ids: [deviceId], play: false }),
+  });
+  // Give Spotify a moment to complete the transfer
+  await new Promise(r => setTimeout(r, 800));
+}
+
 async function spotifyPlay(uris) {
+  // Attempt 1: no device_id (works if a device is already active)
   let r = await fetch('https://api.spotify.com/v1/me/player/play', {
     method: 'PUT',
     headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
@@ -80,10 +92,14 @@ async function spotifyPlay(uris) {
   });
   if (r.ok || r.status === 204) return true;
 
-  // Fallback: find a device and target it explicitly
+  // Attempt 2: find a device, transfer playback to it, then play
   const devices = await getDevices();
   if (!devices.length) return false;
   const device = devices.find(d => d.is_active) || devices.find(d => !d.is_restricted) || devices[0];
+
+  // If no device is active, transfer to it first so Spotify is ready to accept play
+  if (!device.is_active) await transferPlayback(device.id);
+
   r = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${device.id}`, {
     method: 'PUT',
     headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
@@ -111,7 +127,6 @@ async function savePlaylist() {
   try {
     const pl = await spPost(`/me/playlists`, { name, description: desc, public: isPublic });
     if (!pl.id) throw new Error('No playlist ID returned');
-
     const uris   = generatedTracks.map(t => t.uri);
     const chunks = chunkArr(uris, 100);
     for (const c of chunks) {
@@ -130,7 +145,7 @@ async function savePlaylist() {
   } catch (e) {
     closeSaveModal();
     if (e.message.includes('403') || e.message.includes('401')) {
-      showError('Permission error. Please disconnect and reconnect Spotify to refresh your access.');
+      showError('Permission error. Please disconnect and reconnect Spotify.');
     } else {
       showError('Could not save: ' + e.message);
     }
