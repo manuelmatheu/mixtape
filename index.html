@@ -322,64 +322,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Footer -->
-<footer style="
-  position: relative; z-index: 1;
-  width: 100%; max-width: 780px;
-  padding: 24px 24px 40px;
-  font-family: var(--font-m);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--ink);
-  opacity: 0.4;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  border-top: 1px solid rgba(26,18,8,0.08);
-">
-  <span>
-    Powered by <a href="https://www.last.fm/api" target="_blank" style="color:inherit;text-decoration:underline;">Last.fm API</a>
-    &amp; <a href="https://developer.spotify.com/" target="_blank" style="color:inherit;text-decoration:underline;">Spotify Web API</a>
-  </span>
-  <span>
-    Built with <a href="https://claude.ai" target="_blank" style="color:inherit;text-decoration:underline;">Claude</a> by Anthropic
-    · <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v0.2</a>
-  </span>
-</footer>
-
-<!-- Changelog modal -->
-<div class="modal-overlay" id="changelog-modal">
-  <div class="modal" style="max-width:480px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <h2 class="modal-title" style="margin:0;">Changelog</h2>
-      <button class="btn-ghost btn" onclick="document.getElementById('changelog-modal').classList.remove('open')" style="padding:4px 8px;">✕</button>
-    </div>
-    <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;">
-      <div style="margin-bottom:16px;">
-        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.2 — Current</div>
-        <div>· Switched to Last.fm for artist track discovery</div>
-        <div>· Deep Cuts = Last.fm ranks 11–50 by scrobble count</div>
-        <div>· Dual artist search: Spotify + Last.fm merged results</div>
-        <div>· Optional Last.fm play count display per track</div>
-        <div>· Source badges in autocomplete (Spotify / Last.fm)</div>
-        <div>· Spotify matching with artist-exact preference</div>
-        <div>· Unmatched track warning in results</div>
-      </div>
-      <div>
-        <div style="font-weight:500;color:var(--ink);opacity:0.5;margin-bottom:4px;">v0.1 — Initial build</div>
-        <div>· Spotify PKCE OAuth</div>
-        <div>· 3 artist slots with autocomplete</div>
-        <div>· Top Hits / Deep Cuts / Mix modes</div>
-        <div>· Shuffled playlist generation</div>
-        <div>· Save to Spotify + Add to Queue</div>
-        <div>· Configurable tracks per artist (1–10)</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 // ── Config ───────────────────────────────────────────────────────────────────
 const SPOTIFY_CLIENT_ID = '73fce01f5762463e86ff6555751a148c';
@@ -720,6 +662,7 @@ async function generate() {
     setTimeout(() => {
       document.getElementById('status-area').classList.remove('visible');
       renderResults(missing);
+      autoPlay();
     }, 400);
 
   } catch (e) {
@@ -734,6 +677,25 @@ function reshuffle() {
 }
 
 // ── Queue / Save ──────────────────────────────────────────────────────────────
+async function autoPlay() {
+  if (!generatedTracks.length) return;
+  try {
+    await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uris: [generatedTracks[0].uri] }),
+    });
+    for (const t of generatedTracks.slice(1)) {
+      await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(t.uri)}`, {
+        method: 'POST', headers: { Authorization: 'Bearer ' + accessToken },
+      });
+    }
+    showToast(`Playing ${generatedTracks.length} tracks`);
+  } catch {
+    // Silently fail if no active Spotify device
+  }
+}
+
 async function addToQueue() {
   if (!generatedTracks.length) return;
   try {
@@ -759,7 +721,7 @@ async function savePlaylist() {
   const desc     = document.getElementById('playlist-desc').value.trim();
   const isPublic = document.getElementById('playlist-public').checked;
   try {
-    const pl = await spPost(`/users/${userId}/playlists`, { name, description: desc, public: isPublic });
+    const pl = await spPost(`/me/playlists`, { name, description: desc, public: isPublic });
     const chunks = chunkArr(generatedTracks.map(t => t.uri), 100);
     for (const c of chunks) await spPost(`/playlists/${pl.id}/tracks`, { uris: c });
     closeSaveModal();
