@@ -280,6 +280,21 @@
 
     .divider { border: none; border-top: 1px solid var(--border-s); margin: 28px 0; }
 
+    /* Keyboard shortcuts modal */
+    .shortcuts-list { display: flex; flex-direction: column; gap: 10px; }
+    .shortcut-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-m); font-size: 11px; opacity: 0.7; }
+    .shortcut-row kbd {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 24px; height: 24px; padding: 0 6px;
+      background: var(--num-bg); border: 1px solid var(--border);
+      border-radius: 3px; font-family: var(--font-m); font-size: 10px;
+      font-weight: 500; color: var(--fg); line-height: 1;
+    }
+    .shortcut-row span { flex: 1; }
+
+    /* Autocomplete keyboard active state */
+    .autocomplete-item.ac-active { background: var(--tape-bg); }
+
     /* Saved combos */
     .combos-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; min-height: 0; }
     .combos-bar:empty { display: none; }

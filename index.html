@@ -143,20 +143,27 @@
   </span>
   <span>
     Built with <a href="https://claude.ai" target="_blank" style="color:inherit;text-decoration:underline;">Claude</a> by Anthropic
-    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v0.7</a>
+    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v0.8</a>
   </span>
 </footer>
 
 <!-- Changelog modal -->
 <div class="modal-overlay" id="changelog-modal">
-  <div class="modal" style="max-width:480px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div class="modal" style="max-width:480px;display:flex;flex-direction:column;max-height:85vh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-shrink:0;">
       <h2 class="modal-title" style="margin:0;">Changelog</h2>
       <button class="btn btn-ghost" onclick="document.getElementById('changelog-modal').classList.remove('open')" style="padding:4px 8px;">&#x2715;</button>
     </div>
-    <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;">
+    <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;overflow-y:auto;flex:1;">
       <div style="margin-bottom:16px;">
-        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.7 &mdash; Current</div>
+        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.8 &mdash; Current</div>
+        <div>&middot; Saved combos: store and recall artist combinations</div>
+        <div>&middot; Keyboard shortcuts: arrow nav in autocomplete, Esc to close, ? for help</div>
+        <div>&middot; Scrollable changelog modal on mobile</div>
+        <div>&middot; Full mobile responsive layout</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:500;color:var(--fg);opacity:0.5;margin-bottom:4px;">v0.7</div>
         <div>&middot; Dark / light theme toggle with system preference detection</div>
         <div>&middot; Fixed now-playing highlight (added missing Spotify read scopes)</div>
         <div>&middot; Fixed save playlist (tracks now actually added, not just empty playlist)</div>
@@ -206,6 +213,25 @@
         <div>&middot; Save to Spotify + Add to Queue</div>
         <div>&middot; Configurable tracks per artist (1&ndash;10)</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Keyboard shortcuts modal -->
+<div class="modal-overlay" id="shortcuts-modal">
+  <div class="modal" style="max-width:380px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2 class="modal-title" style="margin:0;">Keyboard Shortcuts</h2>
+      <button class="btn btn-ghost" onclick="closeShortcuts()" style="padding:4px 8px;">&#x2715;</button>
+    </div>
+    <div class="shortcuts-list">
+      <div class="shortcut-row"><kbd>?</kbd><span>Show this help</span></div>
+      <div class="shortcut-row"><kbd>Esc</kbd><span>Close modal / dropdown</span></div>
+      <div class="shortcut-row"><kbd>G</kbd><span>Generate mixtape</span></div>
+      <div class="shortcut-row"><kbd>S</kbd><span>Save combo</span></div>
+      <div class="shortcut-row"><kbd>D</kbd><span>Toggle dark / light mode</span></div>
+      <div class="shortcut-row"><kbd>↑</kbd> <kbd>↓</kbd><span>Navigate autocomplete</span></div>
+      <div class="shortcut-row"><kbd>Enter</kbd><span>Select autocomplete result</span></div>
     </div>
   </div>
 </div>

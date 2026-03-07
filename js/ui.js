@@ -164,6 +164,7 @@ function renderSlot(idx) {
       <div class="artist-search-wrap">
         <input class="search-input" id="search-${idx}" type="text" placeholder="Search artist…" autocomplete="off"
           oninput="debounceSearch(${idx},this.value)"
+          onkeydown="handleSearchKey(event,${idx})"
           onblur="setTimeout(()=>document.getElementById('dd-${idx}').classList.remove('open'),200)" />
       </div>
       <div class="autocomplete-dropdown" id="dd-${idx}"></div>`;
@@ -326,6 +327,71 @@ function msToTime(ms) { if(!ms) return '--:--'; const s=Math.floor(ms/1000); ret
 function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return String(n); }
 function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g,''); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+let acSelectedIdx = -1;
+
+function handleSearchKey(e, idx) {
+  const dd = document.getElementById(`dd-${idx}`);
+  if (!dd || !dd.classList.contains('open') || !dd._items) return;
+  const items = dd.querySelectorAll('.autocomplete-item');
+  if (!items.length) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acSelectedIdx = Math.min(acSelectedIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('ac-active', i === acSelectedIdx));
+    items[acSelectedIdx]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acSelectedIdx = Math.max(acSelectedIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('ac-active', i === acSelectedIdx));
+    items[acSelectedIdx]?.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && acSelectedIdx >= 0) {
+    e.preventDefault();
+    selectArtist(idx, acSelectedIdx);
+    acSelectedIdx = -1;
+  } else if (e.key === 'Escape') {
+    dd.classList.remove('open');
+    acSelectedIdx = -1;
+  } else {
+    acSelectedIdx = -1;  // Reset on any other key (typing)
+  }
+}
+
+function openShortcuts()  { document.getElementById('shortcuts-modal').classList.add('open'); }
+function closeShortcuts() { document.getElementById('shortcuts-modal').classList.remove('open'); }
+
+function isModalOpen() {
+  return document.querySelector('.modal-overlay.open') !== null;
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+}
+
+function isTyping() {
+  const el = document.activeElement;
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+}
+
+document.addEventListener('keydown', e => {
+  // Escape: close any open modal or dropdown
+  if (e.key === 'Escape') {
+    if (isModalOpen()) { closeAllModals(); return; }
+    // Close any open autocomplete dropdowns
+    document.querySelectorAll('.autocomplete-dropdown.open').forEach(dd => dd.classList.remove('open'));
+    return;
+  }
+
+  // Don't trigger shortcuts while typing in inputs
+  if (isTyping()) return;
+
+  if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); openShortcuts(); return; }
+  if (e.key === 'g' || e.key === 'G') { e.preventDefault(); generate(); return; }
+  if (e.key === 's' || e.key === 'S') { e.preventDefault(); saveCombo(); return; }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleTheme(); return; }
+});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 async function init() {
