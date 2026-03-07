@@ -197,6 +197,7 @@ async function generate() {
   clearError();
   document.getElementById('status-area').classList.add('visible');
   document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('mix-context').style.display = 'none';
   rawTracks = {};
 
   try {
@@ -235,11 +236,19 @@ async function generate() {
 
     generatedTracks = shuffle(dedup);
 
+    // Capture context data before rendering
+    const ctxArtists  = [...active];
+    const ctxSimilar  = trackMode === 'discovery' ? (rawTracks['__discovery__'] || []).map(t => t._similarArtist).filter((v,i,a) => a.indexOf(v) === i) : [];
+    const ctxMode     = trackMode;
+    const ctxTracks   = [...generatedTracks];
+
     setProgress(100, 'Done!');
     setTimeout(() => {
       document.getElementById('status-area').classList.remove('visible');
       renderResults(missing);
       autoPlay();
+      // Fire context generation async — doesn't block playback
+      generateContext(ctxArtists, ctxSimilar, ctxMode, ctxTracks);
     }, 400);
 
   } catch (e) {
@@ -327,6 +336,83 @@ function msToTime(ms) { if(!ms) return '--:--'; const s=Math.floor(ms/1000); ret
 function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(0)+'K'; return String(n); }
 function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g,''); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Mix context (Claude-powered narrative) ────────────────────────────────────
+function toggleContext() {
+  document.getElementById('mix-context').classList.toggle('collapsed');
+}
+
+async function generateContext(artistList, similarNames, mode, tracks) {
+  const panel   = document.getElementById('mix-context');
+  const textEl  = document.getElementById('context-text');
+  const tagsEl  = document.getElementById('context-tags');
+  const chevron = document.getElementById('context-chevron');
+
+  panel.style.display = '';
+  panel.classList.remove('collapsed');
+  textEl.innerHTML = '<div class="context-loading">Crafting your liner notes…</div>';
+  tagsEl.innerHTML = '';
+
+  // Fetch tags and short bios in parallel
+  const artistNames = artistList.map(a => a.name);
+  const [allTags, allBios] = await Promise.all([
+    Promise.all(artistNames.map(getArtistTags)),
+    Promise.all(artistNames.map(getArtistInfo)),
+  ]);
+
+  // Build tag chips (deduplicated)
+  const tagSet = new Set();
+  allTags.flat().forEach(t => tagSet.add(t));
+  const uniqueTags = [...tagSet].slice(0, 10);
+  tagsEl.innerHTML = uniqueTags.map(t => `<span class="context-tag">${esc(t)}</span>`).join('');
+
+  // Build context for Claude
+  const artistCtx = artistNames.map((name, i) => {
+    const tags = allTags[i].join(', ') || 'unknown genre';
+    const bio  = allBios[i] ? allBios[i].substring(0, 200) : '';
+    return `- ${name}: genres [${tags}]${bio ? '. ' + bio : ''}`;
+  }).join('\n');
+
+  const trackSample = tracks.slice(0, 12).map(t => `${t.name} by ${t.artist}`).join(', ');
+  const modeLabel = { top: 'Top Hits', deep: 'Deep Cuts', mix: 'Mix (top + deep)', discovery: 'Discovery (with similar artists)' }[mode] || mode;
+
+  const prompt = `You are a warm, knowledgeable radio DJ introducing a personalized music mix. Write 2-3 sentences (max 60 words) explaining what the listener is about to hear and why these artists work together. Be specific about musical qualities, not generic. Use the tone of Pandora's Music Genome Project explanations — warm but informed.
+
+Artists in this mix:
+${artistCtx}
+
+${similarNames?.length ? 'Similar artists also included: ' + similarNames.join(', ') : ''}
+
+Mode: ${modeLabel}
+Sample tracks: ${trackSample}
+Total tracks: ${tracks.length}
+
+Write ONLY the paragraph, no intro like "You're about to hear" or "This mix features". Jump right into describing the sound and connection. Use <em> tags around 1-2 key musical descriptors for emphasis.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) throw new Error('API ' + res.status);
+    const data = await res.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    textEl.innerHTML = text || '<em>Could not generate context.</em>';
+  } catch (e) {
+    console.error('Context generation failed:', e);
+    // Fallback: show a simple tag-based description
+    const fallback = uniqueTags.length
+      ? `A ${uniqueTags.slice(0, 3).join(', ')}-flavored mix blending ${artistNames.join(' and ')}.`
+      : `A curated blend of ${artistNames.join(' and ')}.`;
+    textEl.innerHTML = fallback;
+  }
+}
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 let acSelectedIdx = -1;

@@ -66,6 +66,27 @@ async function getTracksForArtist(artist) {
   return [...topHalf, ...deep];
 }
 
+// ── Artist tags (for context narrative) ────────────────────────────────────────
+async function getArtistTags(artistName) {
+  try {
+    const data = await lfm({ method: 'artist.getTopTags', artist: artistName });
+    const tags = data.toptags?.tag || [];
+    return (Array.isArray(tags) ? tags : [tags])
+      .filter(t => t?.name)
+      .slice(0, 5)
+      .map(t => t.name.toLowerCase());
+  } catch { return []; }
+}
+
+async function getArtistInfo(artistName) {
+  try {
+    const data = await lfm({ method: 'artist.getInfo', artist: artistName });
+    const bio = data.artist?.bio?.summary || '';
+    // Strip HTML tags and "Read more" links
+    return bio.replace(/<[^>]+>/g, '').replace(/Read more on Last\.fm.*/i, '').trim();
+  } catch { return ''; }
+}
+
 async function matchToSpotify(lfmTrack) {
   const trackName  = lfmTrack.name;
   const artistName = lfmTrack.artist?.name || '';

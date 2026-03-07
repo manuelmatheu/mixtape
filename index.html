@@ -110,6 +110,18 @@
         <button class="btn btn-secondary" onclick="addToQueue()">Add to Queue</button>
         <button class="btn btn-ghost" onclick="reshuffle()">↺ Reshuffle</button>
       </div>
+
+      <div class="mix-context" id="mix-context" style="display:none;">
+        <button class="context-toggle" onclick="toggleContext()">
+          <span class="context-label">About this mix</span>
+          <span class="context-chevron" id="context-chevron">▾</span>
+        </button>
+        <div class="context-body" id="context-body">
+          <div class="context-text" id="context-text"></div>
+          <div class="context-tags" id="context-tags"></div>
+        </div>
+      </div>
+
       <div class="track-list" id="track-list"></div>
     </div>
   </section>
@@ -143,7 +155,7 @@
   </span>
   <span>
     Built with <a href="https://claude.ai" target="_blank" style="color:inherit;text-decoration:underline;">Claude</a> by Anthropic
-    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v0.8</a>
+    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v0.9</a>
   </span>
 </footer>
 
@@ -156,7 +168,15 @@
     </div>
     <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;overflow-y:auto;flex:1;">
       <div style="margin-bottom:16px;">
-        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.8 &mdash; Current</div>
+        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.9 &mdash; Current</div>
+        <div>&middot; Mix context: Claude-powered "liner notes" explaining the musical connection</div>
+        <div>&middot; Last.fm genre tags and artist bios feed the narrative</div>
+        <div>&middot; Collapsible panel with genre tag chips</div>
+        <div>&middot; Graceful fallback if API unavailable</div>
+        <div>&middot; Renamed to SpotiMix</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:500;color:var(--fg);opacity:0.5;margin-bottom:4px;">v0.8</div>
         <div>&middot; Saved combos: store and recall artist combinations</div>
         <div>&middot; Keyboard shortcuts: arrow nav in autocomplete, Esc to close, ? for help</div>
         <div>&middot; Scrollable changelog modal on mobile</div>
