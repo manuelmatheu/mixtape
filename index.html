@@ -41,6 +41,14 @@
       <button class="btn btn-ghost" onclick="logout()" style="padding:4px 8px;font-size:10px;">Disconnect</button>
     </div>
 
+    <div class="api-key-bar" id="api-key-bar">
+      <span class="api-key-status" id="api-key-status">
+        <span class="api-key-dot" id="api-key-dot"></span>
+        <span id="api-key-label">AI liner notes off</span>
+      </span>
+      <button class="btn btn-ghost" onclick="openApiKeyModal()" style="padding:4px 8px;font-size:10px;">Configure</button>
+    </div>
+
     <div class="error-msg" id="error-msg"></div>
 
     <p class="section-label">Artists</p>
@@ -169,10 +177,10 @@
     <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;overflow-y:auto;flex:1;">
       <div style="margin-bottom:16px;">
         <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v0.9 &mdash; Current</div>
-        <div>&middot; Mix context: Claude-powered "liner notes" explaining the musical connection</div>
-        <div>&middot; Last.fm genre tags and artist bios feed the narrative</div>
-        <div>&middot; Collapsible panel with genre tag chips</div>
-        <div>&middot; Graceful fallback if API unavailable</div>
+        <div>&middot; "About this mix" panel with Last.fm-powered liner notes</div>
+        <div>&middot; Narrative built from genre tags, artist bios, shared/unique traits</div>
+        <div>&middot; Adapts to track mode (deep cuts, discovery, etc.)</div>
+        <div>&middot; Genre tag chips below the narrative</div>
         <div>&middot; Renamed to SpotiMix</div>
       </div>
       <div style="margin-bottom:16px;">

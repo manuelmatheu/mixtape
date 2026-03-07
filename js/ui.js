@@ -337,24 +337,24 @@ function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return
 function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g,''); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// ── Mix context (Claude-powered narrative) ────────────────────────────────────
+// ── Mix context (Last.fm-powered narrative) ──────────────────────────────────
 function toggleContext() {
   document.getElementById('mix-context').classList.toggle('collapsed');
 }
 
 async function generateContext(artistList, similarNames, mode, tracks) {
-  const panel   = document.getElementById('mix-context');
-  const textEl  = document.getElementById('context-text');
-  const tagsEl  = document.getElementById('context-tags');
-  const chevron = document.getElementById('context-chevron');
+  const panel  = document.getElementById('mix-context');
+  const textEl = document.getElementById('context-text');
+  const tagsEl = document.getElementById('context-tags');
 
   panel.style.display = '';
   panel.classList.remove('collapsed');
-  textEl.innerHTML = '<div class="context-loading">Crafting your liner notes…</div>';
+  textEl.innerHTML = '<div class="context-loading">Reading the liner notes…</div>';
   tagsEl.innerHTML = '';
 
-  // Fetch tags and short bios in parallel
   const artistNames = artistList.map(a => a.name);
+
+  // Fetch tags and bios in parallel
   const [allTags, allBios] = await Promise.all([
     Promise.all(artistNames.map(getArtistTags)),
     Promise.all(artistNames.map(getArtistInfo)),
@@ -363,55 +363,117 @@ async function generateContext(artistList, similarNames, mode, tracks) {
   // Build tag chips (deduplicated)
   const tagSet = new Set();
   allTags.flat().forEach(t => tagSet.add(t));
-  const uniqueTags = [...tagSet].slice(0, 10);
+  const uniqueTags = [...tagSet].slice(0, 12);
   tagsEl.innerHTML = uniqueTags.map(t => `<span class="context-tag">${esc(t)}</span>`).join('');
 
-  // Build context for Claude
-  const artistCtx = artistNames.map((name, i) => {
-    const tags = allTags[i].join(', ') || 'unknown genre';
-    const bio  = allBios[i] ? allBios[i].substring(0, 200) : '';
-    return `- ${name}: genres [${tags}]${bio ? '. ' + bio : ''}`;
-  }).join('\n');
+  // Build the narrative
+  textEl.innerHTML = buildNarrative(artistNames, allTags, allBios, similarNames, mode, tracks);
+}
 
-  const trackSample = tracks.slice(0, 12).map(t => `${t.name} by ${t.artist}`).join(', ');
-  const modeLabel = { top: 'Top Hits', deep: 'Deep Cuts', mix: 'Mix (top + deep)', discovery: 'Discovery (with similar artists)' }[mode] || mode;
+function buildNarrative(names, allTags, allBios, similarNames, mode, tracks) {
+  const n = names.length;
 
-  const prompt = `You are a warm, knowledgeable radio DJ introducing a personalized music mix. Write 2-3 sentences (max 60 words) explaining what the listener is about to hear and why these artists work together. Be specific about musical qualities, not generic. Use the tone of Pandora's Music Genome Project explanations — warm but informed.
+  // Extract first meaningful sentence from each bio
+  const bioSnippets = allBios.map(bio => {
+    if (!bio) return '';
+    // Take the first sentence, clean it up
+    const first = bio.split(/(?<=[.!?])\s+/)[0] || '';
+    return first.length > 20 ? first : '';
+  });
 
-Artists in this mix:
-${artistCtx}
-
-${similarNames?.length ? 'Similar artists also included: ' + similarNames.join(', ') : ''}
-
-Mode: ${modeLabel}
-Sample tracks: ${trackSample}
-Total tracks: ${tracks.length}
-
-Write ONLY the paragraph, no intro like "You're about to hear" or "This mix features". Jump right into describing the sound and connection. Use <em> tags around 1-2 key musical descriptors for emphasis.`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-
-    if (!res.ok) throw new Error('API ' + res.status);
-    const data = await res.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || '';
-    textEl.innerHTML = text || '<em>Could not generate context.</em>';
-  } catch (e) {
-    console.error('Context generation failed:', e);
-    // Fallback: show a simple tag-based description
-    const fallback = uniqueTags.length
-      ? `A ${uniqueTags.slice(0, 3).join(', ')}-flavored mix blending ${artistNames.join(' and ')}.`
-      : `A curated blend of ${artistNames.join(' and ')}.`;
-    textEl.innerHTML = fallback;
+  // Find shared tags between artists
+  const tagSets = allTags.map(t => new Set(t));
+  let sharedTags = [];
+  if (n >= 2) {
+    const intersection = [...tagSets[0]].filter(t => tagSets.slice(1).every(s => s.has(t)));
+    sharedTags = intersection.slice(0, 3);
   }
+
+  // Find unique tags per artist (what they bring that others don't)
+  const uniquePerArtist = allTags.map((tags, i) => {
+    const others = new Set(allTags.filter((_, j) => j !== i).flat());
+    return tags.filter(t => !others.has(t)).slice(0, 2);
+  });
+
+  // Mode descriptions
+  const modeDesc = {
+    top:       'their biggest tracks',
+    deep:      'deeper cuts beyond the obvious hits',
+    mix:       'a blend of hits and deeper cuts',
+    discovery: 'their tracks alongside similar artists',
+  };
+
+  // --- Assemble the narrative ---
+  let parts = [];
+
+  // Opening: artist connection
+  if (n === 1) {
+    const bio = bioSnippets[0];
+    const tags = allTags[0].slice(0, 3);
+    if (bio) {
+      parts.push(bio);
+    } else if (tags.length) {
+      parts.push(`${names[0]} brings a sound rooted in <em>${tags.join('</em>, <em>')}</em>.`);
+    } else {
+      parts.push(`A focused session with ${names[0]}.`);
+    }
+  } else if (n === 2) {
+    if (sharedTags.length) {
+      parts.push(`${names[0]} and ${names[1]} share common ground in <em>${sharedTags.join('</em> and <em>')}</em>${uniquePerArtist[0].length ? ', but where ' + names[0] + ' leans into <em>' + uniquePerArtist[0][0] + '</em>' + (uniquePerArtist[1].length ? ', ' + names[1] + ' pulls toward <em>' + uniquePerArtist[1][0] + '</em>' : '') : ''}.`);
+    } else {
+      // No shared tags — highlight the contrast
+      const t0 = allTags[0].slice(0, 2);
+      const t1 = allTags[1].slice(0, 2);
+      if (t0.length && t1.length) {
+        parts.push(`An unexpected pairing: ${names[0]}'s <em>${t0.join('</em>-tinged <em>')}</em> sensibility meets ${names[1]}'s <em>${t1.join('</em> and <em>')}</em> edge.`);
+      } else {
+        parts.push(`${names[0]} and ${names[1]} — two distinct voices woven into one session.`);
+      }
+    }
+  } else {
+    // 3 artists
+    if (sharedTags.length) {
+      parts.push(`Three artists united by <em>${sharedTags[0]}</em>${sharedTags[1] ? ' and <em>' + sharedTags[1] + '</em>' : ''}: ${names.slice(0, -1).join(', ')} and ${names[n - 1]}.`);
+    } else {
+      const allTop = allTags.map(t => t[0]).filter(Boolean);
+      if (allTop.length >= 2) {
+        parts.push(`A mix that moves between <em>${[...new Set(allTop)].join('</em>, <em>')}</em> — pulling from ${names.slice(0, -1).join(', ')} and ${names[n - 1]}.`);
+      } else {
+        parts.push(`${names.slice(0, -1).join(', ')} and ${names[n - 1]} — three voices, one mixtape.`);
+      }
+    }
+  }
+
+  // Middle: mode-specific color
+  const modePhrase = modeDesc[mode] || 'a curated selection';
+  if (mode === 'deep') {
+    parts.push(`This mix digs past the surface into ${modePhrase} — the songs that fans know best.`);
+  } else if (mode === 'discovery' && similarNames?.length) {
+    const simShort = similarNames.slice(0, 3);
+    parts.push(`Discovery mode expands the palette with ${simShort.join(', ')}${similarNames.length > 3 ? ' and more' : ''}, drawing lines between the familiar and the unexpected.`);
+  } else if (mode === 'mix') {
+    parts.push(`Pulling from ${modePhrase}, the tracklist balances the anthems with album-deep rewards.`);
+  }
+
+  // Closing: a bio excerpt if we haven't used one yet and have one
+  if (n > 1) {
+    const unusedBio = bioSnippets.find((b, i) => b && !parts[0]?.includes(names[i]));
+    if (unusedBio && parts.join('').length < 300) {
+      // Only add if we're not already too long
+      parts.push(unusedBio);
+    }
+  }
+
+  // Track count note
+  const topArtist = tracks.reduce((acc, t) => { acc[t.artist] = (acc[t.artist] || 0) + 1; return acc; }, {});
+  const sorted = Object.entries(topArtist).sort((a, b) => b[1] - a[1]);
+  if (sorted.length > 1 && sorted[0][1] > sorted[1][1] + 2) {
+    parts.push(`${tracks.length} tracks, leaning a little heavier on ${sorted[0][0]}.`);
+  } else {
+    parts.push(`${tracks.length} tracks across the full spread.`);
+  }
+
+  return parts.join(' ');
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────

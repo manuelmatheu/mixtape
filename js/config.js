@@ -22,3 +22,4 @@ let uriToIndices    = {};
 const artists       = [null, null, null];
 const searchTimers  = {};
 let savedCombos     = [];  // [{artists: [{name, image, sub},...]}]
+let anthropicKey    = null; // Anthropic API key for mix context
