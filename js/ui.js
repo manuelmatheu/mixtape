@@ -545,105 +545,179 @@ async function generateContext(artistList, similarNames, mode, tracks) {
 
 function buildNarrative(names, allTags, allBios, similarNames, mode, tracks) {
   const n = names.length;
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
-  // Extract first meaningful sentence from each bio
+  // ── Data prep ──────────────────────────────────────────────────────────────
   const bioSnippets = allBios.map(bio => {
     if (!bio) return '';
-    // Take the first sentence, clean it up
     const first = bio.split(/(?<=[.!?])\s+/)[0] || '';
     return first.length > 20 ? first : '';
   });
 
-  // Find shared tags between artists
   const tagSets = allTags.map(t => new Set(t));
   let sharedTags = [];
   if (n >= 2) {
-    const intersection = [...tagSets[0]].filter(t => tagSets.slice(1).every(s => s.has(t)));
-    sharedTags = intersection.slice(0, 3);
+    sharedTags = [...tagSets[0]].filter(t => tagSets.slice(1).every(s => s.has(t))).slice(0, 3);
   }
 
-  // Find unique tags per artist (what they bring that others don't)
   const uniquePerArtist = allTags.map((tags, i) => {
     const others = new Set(allTags.filter((_, j) => j !== i).flat());
     return tags.filter(t => !others.has(t)).slice(0, 2);
   });
 
-  // Mode descriptions
-  const modeDesc = {
-    top:       'their biggest tracks',
-    deep:      'deeper cuts beyond the obvious hits',
-    mix:       'a blend of hits and deeper cuts',
-    discovery: 'their tracks alongside similar artists',
+  const allTopTags = [...new Set(allTags.flat())].slice(0, 5);
+  const em = t => `<em>${t}</em>`;
+  const A = names[0], B = names[1], C = names[2];
+  const listNames = n === 2 ? `${A} and ${B}` : n === 3 ? `${A}, ${B} and ${C}` : A;
+
+  // Track distribution
+  const dist = tracks.reduce((acc, t) => { acc[t.artist] = (acc[t.artist] || 0) + 1; return acc; }, {});
+  const sorted = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+  const dominant = sorted.length > 1 && sorted[0][1] > sorted[1][1] + 2 ? sorted[0][0] : null;
+  const count = tracks.length;
+
+  // Total duration
+  const totalMs = tracks.reduce((s, t) => s + (t.duration || 0), 0);
+  const totalMin = Math.round(totalMs / 60000);
+
+  // ── Template pools ─────────────────────────────────────────────────────────
+
+  // OPENING — 1 artist
+  const open1bio = [
+    () => bioSnippets[0],
+    () => `${A}. ${bioSnippets[0]}`,
+  ].filter(() => bioSnippets[0]);
+  const open1tags = allTags[0]?.length ? [
+    () => `${A} brings a sound rooted in ${em(allTags[0][0])}${allTags[0][1] ? ' and ' + em(allTags[0][1]) : ''}.`,
+    () => `Somewhere between ${em(allTags[0][0])} and ${em(allTags[0][1] || allTags[0][0])}, ${A} carved out a lane.`,
+    () => `The world of ${em(allTags[0][0])} through the lens of ${A}.`,
+    () => `${A}: ${allTags[0].slice(0, 3).map(em).join(', ')}, and everything in between.`,
+  ] : [];
+  const open1 = [
+    ...open1bio,
+    ...open1tags,
+    () => `A deep dive into the catalog of ${A}.`,
+    () => `Just ${A}. Nothing else needed.`,
+  ];
+
+  // OPENING — 2 artists, shared tags
+  const open2shared = sharedTags.length ? [
+    () => `${A} and ${B} both live in the world of ${em(sharedTags[0])}${uniquePerArtist[0][0] ? ' — though ${A} pulls it toward ' + em(uniquePerArtist[0][0]) + ' while ${B} keeps it closer to ' + em(uniquePerArtist[1]?.[0] || sharedTags[0]) : ''}.`,
+    () => `There's a shared thread of ${sharedTags.slice(0, 2).map(em).join(' and ')} running through both ${A} and ${B}.`,
+    () => `${em(sharedTags[0])} is the common language here — ${A} and ${B} just speak it with different accents.`,
+    () => `Both rooted in ${em(sharedTags[0])}, ${A} and ${B} approach it from opposite ends of the room.`,
+    () => `${A} meets ${B} on the common ground of ${sharedTags.slice(0, 2).map(em).join(' and ')}.`,
+    () => `Two artists, one frequency: ${em(sharedTags[0])}. ${A} and ${B} tune in differently, but the signal is the same.`,
+  ] : [];
+
+  // OPENING — 2 artists, contrast
+  const t0 = allTags[0]?.slice(0, 2) || [], t1 = allTags[1]?.slice(0, 2) || [];
+  const open2contrast = (t0.length && t1.length) ? [
+    () => `${A}'s ${em(t0[0])} sensibility collides with ${B}'s ${em(t1[0])} instincts.`,
+    () => `On paper, ${em(t0[0])} and ${em(t1[0])} don't belong together. In practice, ${A} and ${B} prove otherwise.`,
+    () => `${A} comes from the ${em(t0[0])} side. ${B} from ${em(t1[0])}. The tension is the point.`,
+    () => `An unlikely combination: ${A}'s ${em(t0[0])} world meets ${B}'s ${em(t1[0])} edge.`,
+    () => `File this under "shouldn't work but does" — ${em(t0[0])} meets ${em(t1[0])}, courtesy of ${A} and ${B}.`,
+  ] : [
+    () => `${A} and ${B} — two distinct voices, one playlist.`,
+    () => `${A} alongside ${B}. Different worlds, same wavelength.`,
+  ];
+
+  // OPENING — 3 artists, shared
+  const open3shared = sharedTags.length ? [
+    () => `${em(sharedTags[0])} runs through all three: ${listNames}.`,
+    () => `${listNames} — three corners of the ${em(sharedTags[0])} universe.`,
+    () => `A triangle built on ${sharedTags.slice(0, 2).map(em).join(' and ')}: ${listNames}.`,
+    () => `Three artists who all orbit ${em(sharedTags[0])}, each with their own gravity.`,
+    () => `${listNames}. The thread connecting them? ${sharedTags.slice(0, 2).map(em).join(' and ')}.`,
+    () => `What do ${listNames} have in common? Start with ${em(sharedTags[0])}.`,
+  ] : [];
+
+  // OPENING — 3 artists, mixed/no shared
+  const open3mixed = allTopTags.length >= 2 ? [
+    () => `A mix that wanders between ${allTopTags.slice(0, 3).map(em).join(', ')} — ${listNames} leading the way.`,
+    () => `${listNames} each bring something different: ${allTopTags.slice(0, 3).map(em).join(', ')}.`,
+    () => `Three artists, three angles: ${allTopTags.slice(0, 3).map(em).join(', ')}. ${listNames}.`,
+    () => `${listNames} don't share a genre so much as a restlessness — touching on ${allTopTags.slice(0, 3).map(em).join(', ')}.`,
+  ] : [
+    () => `${listNames} — three voices, one session.`,
+    () => `${listNames}, together. Let it play.`,
+  ];
+
+  // MODE sentences
+  const modeSentences = {
+    top: [
+      () => `The biggest tracks, front and center.`,
+      () => `This is the highlight reel — the songs that made them.`,
+      () => `All hits, no filler.`,
+      () => `The tracks everyone knows, and for good reason.`,
+      () => `Start here if you're meeting these artists for the first time.`,
+    ],
+    deep: [
+      () => `Past the singles, into the album cuts.`,
+      () => `These are the tracks the fans talk about.`,
+      () => `Deeper than the setlist — the songs you find on the third listen.`,
+      () => `Skip the greatest hits. This is where it gets interesting.`,
+      () => `The B-sides, the deep cuts, the ones that reward attention.`,
+    ],
+    mix: [
+      () => `A mix of the anthems and the deep pulls.`,
+      () => `Hits to anchor it, deeper tracks to keep it honest.`,
+      () => `Half familiar, half discovery.`,
+      () => `The best of both — big songs and buried ones.`,
+    ],
+    discovery: similarNames?.length ? [
+      () => `Discovery mode pulled in ${similarNames.slice(0, 2).join(' and ')}${similarNames.length > 2 ? ' among others' : ''} — expanding the map.`,
+      () => `Beyond the names you picked: ${similarNames.slice(0, 3).join(', ')}${similarNames.length > 3 ? ' and more' : ''} round out the mix.`,
+      () => `The algorithm went exploring and came back with ${similarNames.slice(0, 2).join(' and ')}${similarNames.length > 2 ? ', plus a few more' : ''}.`,
+      () => `${similarNames.slice(0, 2).join(', ')}${similarNames.length > 2 ? ' and others' : ''} join the session — artists cut from similar cloth.`,
+    ] : [
+      () => `Discovery mode on — expect some names you haven't heard.`,
+    ],
   };
 
-  // --- Assemble the narrative ---
+  // CLOSING sentences
+  const closings = [
+    () => `${count} tracks${totalMin > 10 ? ', about ' + totalMin + ' minutes' : ''}.`,
+    () => `${count} tracks. Hit play.`,
+    () => `${count} songs${dominant ? ', tilted slightly toward ' + dominant : ' spread evenly'}.`,
+    () => `${count} tracks to settle into.`,
+    () => totalMin > 30 ? `${count} tracks — enough for a long drive.` : `${count} tracks — enough for the commute.`,
+    () => `That's ${count} tracks${totalMin ? ' and about ' + totalMin + ' minutes' : ''}. Lean back.`,
+    () => dominant ? `${count} tracks, with ${dominant} carrying a little more of the weight.` : `${count} tracks, balanced across the board.`,
+    () => ``,  // Sometimes skip the closing entirely
+  ];
+
+  // ── Assemble ───────────────────────────────────────────────────────────────
   let parts = [];
 
-  // Opening: artist connection
+  // Pick opening
   if (n === 1) {
-    const bio = bioSnippets[0];
-    const tags = allTags[0].slice(0, 3);
-    if (bio) {
-      parts.push(bio);
-    } else if (tags.length) {
-      parts.push(`${names[0]} brings a sound rooted in <em>${tags.join('</em>, <em>')}</em>.`);
-    } else {
-      parts.push(`A focused session with ${names[0]}.`);
-    }
+    parts.push(pick(open1)());
   } else if (n === 2) {
-    if (sharedTags.length) {
-      parts.push(`${names[0]} and ${names[1]} share common ground in <em>${sharedTags.join('</em> and <em>')}</em>${uniquePerArtist[0].length ? ', but where ' + names[0] + ' leans into <em>' + uniquePerArtist[0][0] + '</em>' + (uniquePerArtist[1].length ? ', ' + names[1] + ' pulls toward <em>' + uniquePerArtist[1][0] + '</em>' : '') : ''}.`);
-    } else {
-      // No shared tags — highlight the contrast
-      const t0 = allTags[0].slice(0, 2);
-      const t1 = allTags[1].slice(0, 2);
-      if (t0.length && t1.length) {
-        parts.push(`An unexpected pairing: ${names[0]}'s <em>${t0.join('</em>-tinged <em>')}</em> sensibility meets ${names[1]}'s <em>${t1.join('</em> and <em>')}</em> edge.`);
-      } else {
-        parts.push(`${names[0]} and ${names[1]} — two distinct voices woven into one session.`);
-      }
-    }
+    parts.push(pick(sharedTags.length ? open2shared : open2contrast)());
   } else {
-    // 3 artists
-    if (sharedTags.length) {
-      parts.push(`Three artists united by <em>${sharedTags[0]}</em>${sharedTags[1] ? ' and <em>' + sharedTags[1] + '</em>' : ''}: ${names.slice(0, -1).join(', ')} and ${names[n - 1]}.`);
-    } else {
-      const allTop = allTags.map(t => t[0]).filter(Boolean);
-      if (allTop.length >= 2) {
-        parts.push(`A mix that moves between <em>${[...new Set(allTop)].join('</em>, <em>')}</em> — pulling from ${names.slice(0, -1).join(', ')} and ${names[n - 1]}.`);
-      } else {
-        parts.push(`${names.slice(0, -1).join(', ')} and ${names[n - 1]} — three voices, one mixtape.`);
-      }
-    }
+    parts.push(pick(sharedTags.length ? open3shared : open3mixed)());
   }
 
-  // Middle: mode-specific color
-  const modePhrase = modeDesc[mode] || 'a curated selection';
-  if (mode === 'deep') {
-    parts.push(`This mix digs past the surface into ${modePhrase} — the songs that fans know best.`);
-  } else if (mode === 'discovery' && similarNames?.length) {
-    const simShort = similarNames.slice(0, 3);
-    parts.push(`Discovery mode expands the palette with ${simShort.join(', ')}${similarNames.length > 3 ? ' and more' : ''}, drawing lines between the familiar and the unexpected.`);
-  } else if (mode === 'mix') {
-    parts.push(`Pulling from ${modePhrase}, the tracklist balances the anthems with album-deep rewards.`);
+  // Pick mode sentence (~70% chance, skip sometimes for variety)
+  const modePool = modeSentences[mode];
+  if (modePool && Math.random() < 0.7) {
+    parts.push(pick(modePool)());
   }
 
-  // Closing: a bio excerpt if we haven't used one yet and have one
-  if (n > 1) {
+  // Maybe add a bio snippet (~40% chance, only if we have one and it's not redundant)
+  if (Math.random() < 0.4 && n > 0) {
     const unusedBio = bioSnippets.find((b, i) => b && !parts[0]?.includes(names[i]));
-    if (unusedBio && parts.join('').length < 300) {
-      // Only add if we're not already too long
+    if (unusedBio && parts.join('').length < 250) {
       parts.push(unusedBio);
     }
   }
 
-  // Track count note
-  const topArtist = tracks.reduce((acc, t) => { acc[t.artist] = (acc[t.artist] || 0) + 1; return acc; }, {});
-  const sorted = Object.entries(topArtist).sort((a, b) => b[1] - a[1]);
-  if (sorted.length > 1 && sorted[0][1] > sorted[1][1] + 2) {
-    parts.push(`${tracks.length} tracks, leaning a little heavier on ${sorted[0][0]}.`);
-  } else {
-    parts.push(`${tracks.length} tracks across the full spread.`);
+  // Pick closing (~80% chance)
+  if (Math.random() < 0.8) {
+    const c = pick(closings)();
+    if (c) parts.push(c);
   }
 
   return parts.join(' ');
