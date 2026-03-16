@@ -381,6 +381,13 @@ async function generateTagMix() {
   const tags = [...selectedGenres];
   if (!tags.length) { showError('Select at least one genre tag.'); return; }
 
+  // Clear selection so it doesn't block future tag picks
+  selectedGenres.clear();
+  updateTagMixControls();
+  if (genresLoaded) {
+    document.querySelectorAll('.genre-chip.selected').forEach(c => c.classList.remove('selected'));
+  }
+
   clearError();
   document.getElementById('status-area').classList.add('visible');
   document.getElementById('results-section').classList.remove('visible');
