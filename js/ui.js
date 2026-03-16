@@ -333,6 +333,7 @@ function setEntry(mode) {
   document.getElementById('entry-browse').classList.toggle('active', mode === 'browse');
   document.getElementById('entry-search-panel').style.display = mode === 'search' ? '' : 'none';
   document.getElementById('entry-browse-panel').style.display = mode === 'browse' ? '' : 'none';
+  document.getElementById('artist-mix-options').style.display = mode === 'search' ? '' : 'none';
 
   if (mode === 'browse') {
     renderMoodPresets();
