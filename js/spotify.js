@@ -10,7 +10,7 @@ async function startAuth() {
   const p = new URLSearchParams({
     client_id: SPOTIFY_CLIENT_ID, response_type: 'code',
     redirect_uri: REDIRECT_URI, code_challenge_method: 'S256',
-    code_challenge: challenge, scope: SCOPES, show_dialog: 'true',
+    code_challenge: challenge, scope: SCOPES,
   });
   window.location = 'https://accounts.spotify.com/authorize?' + p;
 }
@@ -27,7 +27,6 @@ async function exchangeCode(code) {
     }),
   });
   const d = await res.json();
-  console.log('Token exchange — granted scopes:', d.scope);
   if (d.access_token) {
     accessToken = d.access_token;
     localStorage.setItem('spotify_token', accessToken);

@@ -790,113 +790,12 @@ function renderResults(missingCount) {
       </div>
       ${badge}
       <span class="track-duration">${msToTime(t.duration)}</span>
-      <button class="track-heart" id="heart-${i}" onclick="event.stopPropagation();toggleLikeTrack(${i})" title="Save to Liked Songs">♡</button>
     </div>`;
   }).join('');
 
   document.getElementById('results-section').classList.add('visible');
   document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Check which tracks are already liked
-  checkLikedTracks();
-}
-
-// ── Liked Songs ──────────────────────────────────────────────────────────────
-let likedSet = new Set(); // track IDs that are liked
-
-async function checkLikedTracks() {
-  if (!generatedTracks.length || !accessToken) return;
-  const ids = new Set(generatedTracks.map(t => t.uri.split(':').pop()));
-  likedSet.clear();
-  try {
-    // Fetch saved tracks via GET /me/tracks (works in Development Mode)
-    // and check which of our generated tracks are in the library
-    let url = '/me/tracks?limit=50';
-    let pages = 0;
-    while (url && pages < 10) {
-      const data = await spGet(url);
-      for (const item of (data.items || [])) {
-        const tid = item.track?.id;
-        if (tid && ids.has(tid)) likedSet.add(tid);
-      }
-      url = data.next ? data.next.replace('https://api.spotify.com/v1', '') : null;
-      pages++;
-    }
-  } catch (e) {
-    console.warn('Liked Songs check failed:', e.message);
-  }
-  // Update all heart icons
-  generatedTracks.forEach((t, i) => {
-    const id = t.uri.split(':').pop();
-    const btn = document.getElementById('heart-' + i);
-    if (btn) {
-      btn.classList.toggle('liked', likedSet.has(id));
-      btn.textContent = likedSet.has(id) ? '♥' : '♡';
-    }
-  });
-  // Also sync player bar heart
-  updatePlayerBarHeart();
-}
-
-async function toggleLikeTrack(idx) {
-  const t = generatedTracks[idx];
-  if (!t) return;
-  const id = t.uri.split(':').pop();
-  const isLiked = likedSet.has(id);
-
-  try {
-    const method = isLiked ? 'DELETE' : 'PUT';
-    const url = `https://api.spotify.com/v1/me/tracks`;
-    let r = await fetch(url, {
-      method,
-      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: [id] }),
-    });
-    if (r.status === 401) {
-      const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        r = await fetch(url, {
-          method,
-          headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: [id] }),
-        });
-      }
-    }
-    if (!r.ok) {
-      if (r.status === 403) {
-        showError('Liked Songs blocked by Spotify — enable "Web API" in your Spotify Developer Dashboard and request Extended Quota Mode.');
-        return;
-      }
-      throw new Error('Spotify ' + r.status);
-    }
-    if (isLiked) likedSet.delete(id); else likedSet.add(id);
-    // Update track list heart
-    const btn = document.getElementById('heart-' + idx);
-    if (btn) {
-      btn.classList.toggle('liked', !isLiked);
-      btn.textContent = !isLiked ? '♥' : '♡';
-    }
-    updatePlayerBarHeart();
-    showToast(isLiked ? 'Removed from Liked Songs' : 'Saved to Liked Songs');
-  } catch (e) {
-    showError('Could not update Liked Songs: ' + e.message);
-  }
-}
-
-async function toggleLikeCurrentTrack() {
-  if (nowPlayingIndex < 0) return;
-  await toggleLikeTrack(nowPlayingIndex);
-}
-
-function updatePlayerBarHeart() {
-  const btn = document.getElementById('pb-heart');
-  if (!btn || nowPlayingIndex < 0) return;
-  const t = generatedTracks[nowPlayingIndex];
-  if (!t) return;
-  const id = t.uri.split(':').pop();
-  const isLiked = likedSet.has(id);
-  btn.classList.toggle('liked', isLiked);
-  btn.textContent = isLiked ? '♥' : '♡';
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────

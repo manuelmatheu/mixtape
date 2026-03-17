@@ -6,7 +6,7 @@ const SCOPES = [
   'user-read-private','user-read-email',
   'user-modify-playback-state','user-read-playback-state','user-read-currently-playing',
   'playlist-modify-public','playlist-modify-private',
-  'streaming','user-library-modify','user-library-read',
+  'streaming',
 ].join(' ');
 
 // ── State ─────────────────────────────────────────────────────────────────────
