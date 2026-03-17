@@ -1,22 +1,35 @@
 # SpotiMix 🎶
 
-A single-page web app that blends the top tracks of up to 3 artists into one shuffled Spotify playlist. Artist discovery is powered by Last.fm; playback and playlist saving use the Spotify Web API.
+A single-page web app that blends tracks from artists, genres, and moods into shuffled Spotify playlists. Two ways to mix: pick artists manually, or let genre tags and mood presets build it for you. Artist discovery powered by Last.fm, playback and playlists via Spotify Web API, with an embedded in-browser player.
 
-**Live app → [https://spotimix-app.vercel.app/](https://spotimix-app.vercel.app/)**
+**Live app → [spotimix-app.vercel.app](https://spotimix-app.vercel.app/)**
 
 ---
 
 ## How it works
 
+### Artist Mix
 1. Search for up to 3 artists via Spotify
-2. Choose a track mode: **Top Hits**, **Deep Cuts**, **Mix**, or **Discovery**
-3. Set how many tracks per artist (1–10)
-4. Hit **Generate SpotiMix** — Last.fm fetches the tracks, Spotify matches and plays them
-5. Click any track to play from that point; the current track is highlighted automatically
-6. Save the result as a Spotify playlist or add it directly to your queue
-7. Save your favorite artist combinations as combos for quick recall
+2. Use **Smart Suggest** — genre tags and similar artists auto-fill remaining slots
+3. Choose a track mode: **Top Hits**, **Deep Cuts**, **Mix**, or **Discovery**
+4. Hit **Generate SpotiMix** — Last.fm fetches tracks, Spotify matches and plays them
 
-### Track modes
+### Tag Mix
+1. Switch to **Browse genres** tab
+2. Pick a **mood preset** (Melancholy, Late Night, Dreamy, etc.) or select up to 3 genre tags
+3. Hit **Generate Tag Mix** — tracks sourced directly from Last.fm tags, matched on Spotify
+4. No artist selection needed — the genre defines the mix
+
+### Both flows share
+- Embedded in-browser player with album art, controls, seekable progress bar
+- Click any track to play from that point
+- Save to Spotify playlist or add to queue
+- Heart/like button saves tracks to Spotify Liked Songs
+- "About this mix" liner notes with genre tag chips
+- Interleave shuffle (no consecutive same-artist tracks)
+- Save artist combos for quick recall
+
+### Track modes (Artist Mix)
 
 | Mode | Source |
 |------|--------|
@@ -25,21 +38,36 @@ A single-page web app that blends the top tracks of up to 3 artists into one shu
 | Mix | Half top hits, half deep cuts |
 | Discovery | Your artists + 2 tracks each from 3 similar artists |
 
+### Mood presets (Tag Mix)
+
+| Mood | Tags | Auto-mode |
+|------|------|-----------|
+| 🌧 Melancholy | sad, melancholy, ambient | Deep Cuts |
+| 🌙 Late Night | electronic, chillwave, synthwave | Mix |
+| ☀️ Sunday Morning | acoustic, folk, singer-songwriter | Top Hits |
+| ⚡ Raw Energy | punk, garage rock, post-punk | Top Hits |
+| 💭 Dreamy | shoegaze, dream pop, ethereal | Deep Cuts |
+| 🎷 Soul Kitchen | soul, funk, rnb | Mix |
+| 🎧 Deep Focus | post-rock, minimal, instrumental | Deep Cuts |
+| 🍷 Midnight Jazz | jazz, smooth jazz, bossa nova | Mix |
+| 🤘 Headbanger | metal, heavy metal, thrash metal | Top Hits |
+| 🌴 Tropicália | latin, bossa nova, tropicalia | Mix |
+
 ---
 
 ## File structure
 
 ```
-mixtape/
-├── index.html        — HTML structure only
+SpotiMix/
+├── index.html        — HTML structure + player bar
 ├── css/
-│   └── style.css     — All styles
+│   └── style.css     — All styles (dark/light theme, player bar, responsive)
 └── js/
-    ├── config.js     — API keys, shared state
-    ├── spotify.js    — Auth, Spotify API, playback, playlist save
-    ├── lastfm.js     — Last.fm track/similar artist fetching + Spotify matching
-    ├── player.js     — Now-playing polling, highlight, click-to-play
-    └── ui.js         — Search, slots, combos, generate, render, shortcuts, boot
+    ├── config.js     — API keys, scopes, shared state, SDK state
+    ├── spotify.js    — Auth, refresh tokens, Spotify API, SDK init, playback
+    ├── lastfm.js     — Last.fm tracks, tags, similar artists, Spotify matching
+    ├── player.js     — SDK player, polling fallback, player bar, like/unlike
+    └── ui.js         — Search, genres, moods, combos, suggest, generate, render
 ```
 
 ---
@@ -47,9 +75,10 @@ mixtape/
 ## Stack
 
 - **Vanilla HTML/JS** — no framework, no build step
-- **Spotify Web API** — PKCE OAuth, search, playback, playlist creation
-- **Last.fm API** — artist top tracks, similar artists, genre tags, bios
-- **GitHub Pages** — static hosting
+- **Spotify Web API** — PKCE OAuth, search, playback, playlist creation, liked songs
+- **Spotify Web Playback SDK** — in-browser audio streaming
+- **Last.fm API** — artist top tracks, similar artists, genre tags, bios, tag top tracks
+- **Vercel** — production hosting (auto-deploys from GitHub)
 
 ---
 
@@ -72,8 +101,8 @@ mixtape/
 ### 1. Spotify app
 
 - Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
-- Create an app (or reuse an existing one)
-- Add your GitHub Pages URL as a Redirect URI: `https://YOURUSERNAME.github.io/mixtape/`
+- Create an app and select "Web Playback SDK" + "Web API"
+- Add your deployment URL as a Redirect URI (e.g., `https://spotimix-app.vercel.app/`)
 - Copy the Client ID
 
 ### 2. Configuration
@@ -89,110 +118,60 @@ Get a free Last.fm API key at [last.fm/api](https://www.last.fm/api/account/crea
 
 ### 3. Deploy
 
-Push to a GitHub repo with Pages enabled (Settings → Pages → Deploy from `main` branch root).
+Push to GitHub and connect to Vercel (or any static hosting). No build step needed.
 
 ---
 
 ## Notes
 
-- Requires a **Spotify Premium** account for playback and queue management
+- Requires a **Spotify Premium** account for playback and the embedded player
 - Deep Cuts quality depends on how well-scrobbled an artist is on Last.fm
+- Embedded player streams audio in the browser tab (desktop). Mobile falls back to remote control.
 - Spotify matching can occasionally miss tracks with non-standard characters; unmatched tracks are skipped with a warning
 
 ---
 
 ## Changelog
 
+### v1.6
+- Heart/like button: save tracks to Spotify Liked Songs
+- Hearts on both player bar (current track) and track list rows
+- Batch-checks existing likes on render, toggles with visual feedback
+- Retro SVG volume icon replacing emoji (matches transport controls)
+
 ### v1.5
 - Embedded player: Spotify Web Playback SDK streams audio directly in-browser
 - Persistent player bar: album art, track info, prev/play/next, seekable progress, volume
 - Real-time track updates via SDK events (replaces 5s polling when active)
 - Automatic remote-control fallback when SDK unavailable (mobile, ad blockers)
-- `streaming` scope added (one-time re-auth required)
 
 ### v1.4
-- Tag Mix: new parallel mix creation flow — pick genres or moods, generate directly from tags
+- Tag Mix: parallel mix creation flow — pick genres or moods, generate directly from tags
 - Tracks sourced from Last.fm `tag.getTopTracks`, matched on Spotify
 - Tracks-per-tag slider (1–10)
-- Mood presets now generate Tag Mix directly (skip artist slot step)
+- Mood presets generate Tag Mix directly (skip artist slot step)
 - Tag-specific liner notes with dedicated template pool
-- "Find artists instead" option preserved for artist-based flow
-- Artist Mix flow completely unchanged and independent
 
 ### v1.3
-- Mood Presets: 10 one-click mood cards (Melancholy, Late Night, Sunday Morning, Raw Energy, Dreamy, Soul Kitchen, Deep Focus, Midnight Jazz, Headbanger, Tropicália)
+- Mood Presets: 10 one-click mood cards
 - Each mood maps to 2–3 Last.fm tags and auto-sets track mode
-- Smart Suggest now includes similar artists (rust-colored chips) alongside genre tags
+- Smart Suggest includes similar artists alongside genre tags
 
 ### v1.2
-- Smart Suggest: pick 1–2 artists, see genre tags, click to auto-fill remaining slots
-- Tags ranked by relevance (shared tags first for multi-artist)
-- Suggestions powered by Last.fm tags + Spotify artist search
+- Smart Suggest: pick 1–2 artists, see genre tags and similar artists, click to auto-fill
 - Liner notes rewritten with template pool system (150+ unique combinations)
 
 ### v1.1
-- Genre tag browser as alternative entry point (Browse genres tab)
-- Multi-genre selection (up to 3 tags) with Spotify artist lookup
-- Clickable context tags in "About this mix" panel
-- Interleave shuffle (no consecutive same-artist tracks)
-- Spotify repeat disabled after playback starts
-- Refresh token support for persistent login
+- Genre tag browser as alternative entry point
+- Multi-genre selection with Spotify artist lookup
+- Clickable context tags, interleave shuffle, refresh token support
 
 ### v1.0
-- "About this mix" panel with Last.fm-powered liner notes
-- Narrative built from genre tags, artist bios, shared/unique traits
-- Genre tag chips
-- Spotify login and theme now persist across sessions (moved to localStorage)
-- Full mobile responsive layout fixes
+- "About this mix" liner notes panel, dark/light theme, persistent login, mobile responsive
 
-### v0.9
-- "About this mix" collapsible panel with Last.fm-powered liner notes
-- Narrative engine built from genre tags, artist bios, shared/unique traits
-- Adapts to track mode (deep cuts, discovery, etc.)
-- Genre tag chips
-- Renamed to SpotiMix
-
-### v0.8
-- Saved combos: store and recall artist combinations
-- Keyboard shortcuts with `?` help modal
-- Scrollable changelog modal
-- Full mobile responsive layout
-
-### v0.7
-- Dark / light theme toggle with system preference detection
-- Fixed now-playing highlight (added missing Spotify read scopes)
-- Fixed save playlist (tracks now actually added, not just empty playlist)
-- Playlist opens in Spotify after save
-
-### v0.6
-- Artist search now uses Spotify only (faster, cleaner results)
-- Now-playing highlight follows track skips in real time
-- Polling fires immediately on playback start
-
-### v0.5
-- Now-playing highlight: current track shown in rust red
-- Click any track to play from that point, queuing the rest
-- Play icon replaces track number on hover and while playing
-- Split into `css/` and `js/` files, cassette 📼 favicon
-
-### v0.4
-- Discovery mode: adds 2 tracks each from 3 similar artists per selection
-- Similar artists sourced from Last.fm, deduplicated across selections
-
-### v0.3
-- Auto-play on generation
-- Fixed 403 error when saving playlists
-- Device fallback for idle Spotify clients
-
-### v0.2
-- Switched to Last.fm for artist track discovery
-- Deep Cuts defined as Last.fm ranks 11–50 by scrobble count
-- Optional Last.fm play count display per track
-- Spotify track matching with exact artist name preference
-
-### v0.1
-- Initial build: Spotify PKCE OAuth, 3 artist slots, Top/Deep/Mix modes, shuffled playlists, save + queue
+### v0.1–v0.9
+- Core features: Spotify PKCE OAuth, artist search, Top/Deep/Mix/Discovery modes, shuffled playlists, save to Spotify, add to queue, now-playing highlight, saved combos, keyboard shortcuts
 
 ---
 
-Built with [Claude](https://claude.ai) by Anthropic
+Built with ❤ by Manuel Matheu with [Claude](https://claude.ai) by Anthropic
