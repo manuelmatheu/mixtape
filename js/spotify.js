@@ -10,7 +10,7 @@ async function startAuth() {
   const p = new URLSearchParams({
     client_id: SPOTIFY_CLIENT_ID, response_type: 'code',
     redirect_uri: REDIRECT_URI, code_challenge_method: 'S256',
-    code_challenge: challenge, scope: SCOPES,
+    code_challenge: challenge, scope: SCOPES, show_dialog: 'true',
   });
   window.location = 'https://accounts.spotify.com/authorize?' + p;
 }
