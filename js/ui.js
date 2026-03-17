@@ -800,8 +800,7 @@ function renderResults(missingCount) {
 let likedSet = new Set(); // track IDs that are liked
 
 async function checkLikedTracks() {
-  if (!generatedTracks.length) return;
-  // Spotify API accepts up to 50 IDs per check
+  if (!generatedTracks.length || !accessToken) return;
   const ids = generatedTracks.map(t => t.uri.split(':').pop());
   likedSet.clear();
   for (let i = 0; i < ids.length; i += 50) {
@@ -813,8 +812,11 @@ async function checkLikedTracks() {
       if (r.ok) {
         const results = await r.json();
         batch.forEach((id, j) => { if (results[j]) likedSet.add(id); });
+      } else if (r.status === 403) {
+        console.warn('Liked Songs check: missing user-library-read scope');
+        return; // Don't keep trying if scope is missing
       }
-    } catch {}
+    } catch { /* network error, skip silently */ }
   }
   // Update all heart icons
   generatedTracks.forEach((t, i) => {
@@ -825,6 +827,8 @@ async function checkLikedTracks() {
       btn.textContent = likedSet.has(id) ? '♥' : '♡';
     }
   });
+  // Also sync player bar heart
+  updatePlayerBarHeart();
 }
 
 async function toggleLikeTrack(idx) {
@@ -837,20 +841,26 @@ async function toggleLikeTrack(idx) {
     const r = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${id}`, {
       method: isLiked ? 'DELETE' : 'PUT',
       headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] }),
     });
-    if (r.ok || r.status === 200) {
-      if (isLiked) likedSet.delete(id); else likedSet.add(id);
-      const btn = document.getElementById('heart-' + idx);
-      if (btn) {
-        btn.classList.toggle('liked', !isLiked);
-        btn.textContent = !isLiked ? '♥' : '♡';
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403) {
+        showError('Permission error — disconnect and reconnect Spotify to enable Liked Songs.');
+        return;
       }
-      // Also update player bar heart if this is the current track
-      updatePlayerBarHeart();
-      showToast(isLiked ? 'Removed from Liked Songs' : 'Saved to Liked Songs');
+      throw new Error('Spotify ' + r.status);
     }
-  } catch {
-    showError('Could not update Liked Songs.');
+    if (isLiked) likedSet.delete(id); else likedSet.add(id);
+    // Update track list heart
+    const btn = document.getElementById('heart-' + idx);
+    if (btn) {
+      btn.classList.toggle('liked', !isLiked);
+      btn.textContent = !isLiked ? '♥' : '♡';
+    }
+    updatePlayerBarHeart();
+    showToast(isLiked ? 'Removed from Liked Songs' : 'Saved to Liked Songs');
+  } catch (e) {
+    showError('Could not update Liked Songs: ' + e.message);
   }
 }
 
