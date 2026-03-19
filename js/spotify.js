@@ -30,6 +30,7 @@ async function exchangeCode(code) {
   if (d.access_token) {
     accessToken = d.access_token;
     localStorage.setItem('spotify_token', accessToken);
+    localStorage.setItem('spotify_token_expiry', Date.now() + (d.expires_in || 3600) * 1000);
     if (d.refresh_token) localStorage.setItem('spotify_refresh', d.refresh_token);
     sessionStorage.removeItem('pkce_verifier');
     window.history.replaceState({}, '', REDIRECT_URI);
@@ -53,6 +54,7 @@ async function refreshAccessToken() {
     if (d.access_token) {
       accessToken = d.access_token;
       localStorage.setItem('spotify_token', accessToken);
+      localStorage.setItem('spotify_token_expiry', Date.now() + (d.expires_in || 3600) * 1000);
       if (d.refresh_token) localStorage.setItem('spotify_refresh', d.refresh_token);
       return true;
     }
@@ -303,27 +305,34 @@ function initSDKPlayer() {
   sdkPlayer = new Spotify.Player({
     name: 'SpotiMix',
     getOAuthToken: async cb => {
-      // Always try to provide a fresh token
-      // If the current one works, great; if not, refresh it
-      if (accessToken) {
-        cb(accessToken);
-      } else {
-        const ok = await refreshAccessToken();
-        cb(ok ? accessToken : '');
+      // Proactively refresh if token expires within 5 minutes
+      const expiry = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
+      if (!accessToken || Date.now() > expiry - 5 * 60 * 1000) {
+        await refreshAccessToken();
       }
+      cb(accessToken || '');
     },
     volume: 0.8,
   });
 
   sdkPlayer.addListener('ready', ({ device_id }) => {
+    const reconnecting = sdkNeedsRetransfer;
     sdkDeviceId = device_id;
     sdkReady = true;
+    stopPolling();
     console.log('SDK ready, device:', device_id);
+    // If we're recovering from an auth error, retransfer playback back to SDK device
+    if (reconnecting && sessionQueue.size > 0 && !sessionPaused) {
+      sdkNeedsRetransfer = false;
+      transferPlayback(sdkDeviceId).catch(() => {});
+    }
   });
 
   sdkPlayer.addListener('not_ready', () => {
     sdkReady = false;
     console.log('SDK device not ready');
+    // Start polling as fallback so player bar stays live
+    if (sessionQueue.size > 0) startPolling();
   });
 
   sdkPlayer.addListener('player_state_changed', state => {
@@ -338,13 +347,14 @@ function initSDKPlayer() {
   });
   sdkPlayer.addListener('authentication_error', async ({ message }) => {
     console.warn('SDK auth error:', message);
-    // Try refreshing the token and reconnecting
+    sdkReady = false;
+    // Start polling as fallback while we reconnect
+    if (sessionQueue.size > 0) startPolling();
     const ok = await refreshAccessToken();
     if (ok && sdkPlayer) {
+      sdkNeedsRetransfer = true;
       sdkPlayer.disconnect();
       sdkPlayer.connect();
-    } else {
-      sdkReady = false;
     }
   });
   sdkPlayer.addListener('account_error', ({ message }) => {
