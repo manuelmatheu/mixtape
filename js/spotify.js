@@ -290,6 +290,7 @@ async function savePlaylist() {
       }
       if (!addRes.ok) {
         const err = await addRes.json().catch(() => ({}));
+        console.error('Add tracks error body:', JSON.stringify(err));
         throw new Error(`Adding tracks failed (${addRes.status}): ${err?.error?.message || 'unknown'}`);
       }
     }
@@ -304,11 +305,7 @@ async function savePlaylist() {
     }
   } catch (e) {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save to Spotify'; }
-    if (e.message.includes('403') || e.message.includes('401')) {
-      showError('Permission error — disconnect and reconnect Spotify.');
-    } else {
-      showError('Could not save: ' + e.message);
-    }
+    showError('Could not save: ' + e.message);
   }
 }
 
