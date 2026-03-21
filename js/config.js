@@ -24,10 +24,12 @@ const artists       = [null, null, null];
 const searchTimers  = {};
 let savedCombos     = [];  // [{artists: [{name, image, sub},...]}]
 let tracksPerTag    = 5;   // Tag Mix: tracks fetched per tag
+let currentMixLabel = '';  // Used for auto-naming saved playlists
 
 // ── SDK Player State ──────────────────────────────────────────────────────────
-let sdkPlayer    = null;
-let sdkDeviceId  = null;
-let sdkReady     = false;
-let progressRAF  = null;   // requestAnimationFrame id for progress bar
-let lastSDKState = null;   // last player_state_changed state
+let sdkPlayer          = null;
+let sdkDeviceId        = null;
+let sdkReady           = false;
+let sdkNeedsRetransfer = false; // set true when SDK reconnects after auth error
+let progressRAF        = null;  // requestAnimationFrame id for progress bar
+let lastSDKState       = null;  // last player_state_changed state

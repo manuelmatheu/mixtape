@@ -94,6 +94,7 @@ function updatePlayerBarHeart(trackId) {
   if (!btn) return;
   const liked = !!(trackId && likedSet.has(trackId));
   btn.classList.toggle('liked', liked);
+  btn.textContent = liked ? '♥' : '♡';
   btn.dataset.trackId = trackId || '';
 }
 
