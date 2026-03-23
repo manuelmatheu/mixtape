@@ -334,6 +334,8 @@ let selectedGenres = new Set();
 
 function enterHeroMode() {
   document.getElementById('app-section').classList.add('mix-active');
+  const heroComboBtn = document.querySelector('.btn-save-combo-hero');
+  if (heroComboBtn) heroComboBtn.style.display = artists.filter(Boolean).length >= 2 ? '' : 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -341,6 +343,8 @@ function exitHeroMode() {
   const app = document.getElementById('app-section');
   if (!app.classList.contains('mix-active')) return;
   app.classList.remove('mix-active');
+  const heroComboBtn = document.querySelector('.btn-save-combo-hero');
+  if (heroComboBtn) heroComboBtn.style.display = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
