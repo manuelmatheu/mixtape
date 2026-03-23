@@ -799,6 +799,10 @@ function renderResults(missingCount) {
     </div>`;
   }).join('');
 
+  const name = document.getElementById('username-label').textContent;
+  document.querySelector('.results-title').textContent = name
+    ? `${name}, here's your SpotiMix:` : 'Your SpotiMix';
+
   document.getElementById('results-section').classList.add('visible');
   enterHeroMode();
 
