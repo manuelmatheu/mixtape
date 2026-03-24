@@ -755,13 +755,19 @@ async function generate() {
       setProgress(50, `Matching ${lfmTracks.length} Last.fm tracks on Spotify…`);
 
     } else if (trackMode === 'discovery') {
-      // Similar artists' Spotify top tracks
-      setProgress(20, 'Finding similar artists…');
+      // Your artists' top tracks + 2 tracks from each similar artist
+      setProgress(15, 'Fetching your artists\' tracks\u2026');
+      const mainResults = await Promise.all(active.map(a => getSpotifyTopTracks(a.name)));
+      mainResults.forEach((tracks, i) => {
+        spotifyDirect.push(...tracks.slice(0, tracksPerArtist).map(t => ({ ...t, _artist: active[i].name })));
+      });
+
+      setProgress(25, 'Finding similar artists…');
       const activeNames  = active.map(a => a.name);
       const similarNames = await getSimilarArtists(activeNames, 3 * active.length);
       ctxSimilar = similarNames;
 
-      setProgress(35, `Fetching Spotify tracks for ${similarNames.length} similar artists…`);
+      setProgress(40, `Fetching Spotify tracks for ${similarNames.length} similar artists…`);
       const BATCH = 3;
       for (let i = 0; i < similarNames.length; i += BATCH) {
         const batch = similarNames.slice(i, i + BATCH);
@@ -770,10 +776,10 @@ async function generate() {
           const picked = tracks.slice(0, 2).map(t => ({ ...t, _artist: batch[j], _type: 'discovery' }));
           spotifyDirect.push(...picked);
         });
-        setProgress(35 + Math.round(((i + BATCH) / similarNames.length) * 35),
+        setProgress(40 + Math.round(((i + BATCH) / similarNames.length) * 35),
           `Fetched tracks for ${Math.min(i + BATCH, similarNames.length)} / ${similarNames.length} artists…`);
       }
-      setProgress(75, 'Building mix…');
+      setProgress(80, 'Building mix…');
     }
 
     // Match Last.fm tracks that still need Spotify URIs
