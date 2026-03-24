@@ -285,7 +285,50 @@ streaming, user-library-modify, user-library-read
 - Offline-resilient: silent failures, localStorage-only fallback
 - Malformed cloud data filtering for robustness
 
-### Session 3: UX improvements
+### Session 3: Hybrid Track Sourcing (fresher mixes)
+
+**Problem:** Tracks are sourced 100% from Last.fm `artist.getTopTracks`, which ranks by all-time scrobble count. Older catalog tracks with 20 years of scrobbles always outrank newer singles. Mixes feel skewed toward classic/older material.
+
+**Solution:** Blend Last.fm (deep catalog) with Spotify (current popularity) for track selection. Last.fm stays as the discovery brain (tags, similar artists, bios).
+
+**New function — `spotify.js`:**
+- `getSpotifyTopTracks(artistName)` — searches Spotify for artist → gets Spotify artist ID → calls `GET /artists/{id}/top-tracks` → returns track objects in same shape as `matchToSpotify()` output (already have `uri`, `name`, `artist`, `albumArt`, `duration`)
+- These are Spotify's own popularity-ranked tracks, factoring in recent streaming activity
+
+**Modified function — `generate()` in `ui.js`:**
+- For each artist, fetch from **both** sources in parallel:
+  - Last.fm `artist.getTopTracks` (existing) — the deep catalog
+  - Spotify `GET /artists/{id}/top-tracks` (new) — current popularity
+- Merge and deduplicate by normalized track name
+- Track mode controls the blend:
+  - **Top Hits** → Spotify top tracks only (freshest, most streamed now)
+  - **Deep Cuts** → Last.fm ranks 11–50 only (unchanged, catalog deep pulls)
+  - **Mix** → half Spotify top, half Last.fm deep cuts
+  - **Discovery** → similar artists' Spotify top tracks (instead of Last.fm top tracks)
+
+**Modified function — `generateTagMix()` in `ui.js` (optional enhancement):**
+- After fetching Last.fm `tag.getTopTracks`, identify top artists in the pool
+- Also fetch their Spotify top tracks and blend into the pool
+- Gives Tag Mix a fresher feel without changing the tag-based discovery
+
+**What to store — `config.js` / artist objects:**
+- When user selects an artist via search, the Spotify artist ID is already in the search result (`data.artists.items[0].id`)
+- Store it in the artist object: `{ name, image, sub, spotifyId }`
+- `selectArtist()` in ui.js already has access to this data — just add the field
+
+**What stays the same:**
+- `matchToSpotify()` — still used for Last.fm-sourced tracks that need URI matching
+- `interleaveShuffle()`, `renderResults()`, playback, liked songs — unchanged
+- Last.fm tags, similar artists, bios — still the discovery/context brain
+- Smart Suggest, mood presets, genre browser — unchanged
+
+**Files to modify:**
+- `spotify.js` — add `getSpotifyTopTracks(artistName)`
+- `ui.js` — modify `generate()` to blend sources based on mode
+- `ui.js` — modify `selectArtist()` to store `spotifyId`
+- `ui.js` — optionally modify `generateTagMix()` for fresher tag mixes
+
+### Session 4: UX improvements
 - Liked songs heart animation (brief scale pulse on toggle)
 - Loading skeleton for genre grid while tags load
 - "Now playing" mini-indicator in browser tab title (`♫ Track — Artist | SpotiMix`)

@@ -109,7 +109,36 @@ A phased plan for evolving SpotiMix from a playlist generator into a standalone 
 
 ---
 
-## Phase 9: Future features to consider
+## Phase 9: Hybrid Track Sourcing ← **UP NEXT**
+
+**Goal:** Fresher mixes by blending Last.fm catalog depth with Spotify's current popularity data.
+
+**Problem:** Last.fm `artist.getTopTracks` ranks by all-time scrobble count (20+ years of data). Newer singles can't compete with catalog classics, so mixes feel skewed toward older material.
+
+**Solution:** Use Last.fm for discovery (tags, similar artists, genre connections) but add Spotify's `GET /artists/{id}/top-tracks` for the actual track selection. Spotify's popularity ranking factors in recent streaming activity.
+
+**How track modes change:**
+
+| Mode | Current (Last.fm only) | New (hybrid) |
+|------|----------------------|--------------|
+| Top Hits | Last.fm ranks 1–10 | Spotify top tracks (freshest, most streamed now) |
+| Deep Cuts | Last.fm ranks 11–50 | Unchanged (catalog deep pulls are the point) |
+| Mix | Half top, half deep from Last.fm | Half Spotify top + half Last.fm deep cuts |
+| Discovery | Similar artists' Last.fm top tracks | Similar artists' Spotify top tracks |
+
+**New function:**
+- `getSpotifyTopTracks(artistName)` in spotify.js — search → get artist ID → `/artists/{id}/top-tracks`
+
+**Modified functions:**
+- `generate()` — fetch from both sources in parallel, blend based on mode
+- `selectArtist()` — store Spotify artist ID in artist object
+- `generateTagMix()` (optional) — blend Spotify top tracks into tag-sourced pool
+
+**What stays the same:** `matchToSpotify()`, `interleaveShuffle()`, all playback, liked songs, Smart Suggest, mood presets, genre browser, liner notes
+
+---
+
+## Phase 10: Future features to consider
 
 **Ideas for future sessions — not committed, open to discussion.**
 
