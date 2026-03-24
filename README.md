@@ -33,10 +33,10 @@ A single-page web app that blends tracks from artists, genres, and moods into sh
 
 | Mode | Source |
 |------|--------|
-| Top Hits | Last.fm ranks 1–10 by scrobble count |
+| Top Hits | Spotify search — current popularity-ranked tracks |
 | Deep Cuts | Last.fm ranks 11–50 by scrobble count |
-| Mix | Half top hits, half deep cuts |
-| Discovery | Your artists + 2 tracks each from 3 similar artists |
+| Mix | Half Spotify top tracks + half Last.fm deep cuts |
+| Discovery | Your artists' top tracks + 2 tracks each from similar artists |
 
 ### Mood presets (Tag Mix)
 
@@ -132,6 +132,16 @@ Push to GitHub and connect to Vercel (or any static hosting). No build step need
 ---
 
 ## Changelog
+
+### v1.8
+- Hybrid track sourcing: Top Hits and Discovery now pull from Spotify search (current popularity) instead of Last.fm all-time scrobbles — mixes feel fresher and more current
+- Mix mode blends Spotify top tracks + Last.fm deep cuts in parallel
+- Discovery mode: main artists' top tracks + 2 tracks each from similar artists (all via Spotify)
+
+### v1.7
+- Cloud-Synced Combos: saved artist combos persist across devices via Supabase
+- Automatic merge + dedup on login (local + cloud)
+- Offline-resilient: works from localStorage when Supabase is unreachable
 
 ### v1.6
 - Heart/like button: save tracks to Spotify Liked Songs

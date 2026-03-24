@@ -221,7 +221,7 @@ streaming, user-library-modify, user-library-read
 
 ---
 
-## Current version: v1.7
+## Current version: v1.8
 
 ### What's shipped
 1. ✅ Genre Tag Browser — browse genres, multi-select, Spotify artist lookup
@@ -231,9 +231,11 @@ streaming, user-library-modify, user-library-read
 5. ✅ Embedded Player — Spotify Web Playback SDK with remote fallback
 6. ✅ Liked Songs — heart/like on player bar + track rows
 7. ✅ Cloud-Synced Combos — Supabase sync, merge+dedup, offline-resilient
+8. ✅ Hybrid Track Sourcing — Top Hits/Mix/Discovery use Spotify search (current popularity); Deep Cuts unchanged
 
 ### What's next (see ROADMAP.md)
 - **Phase 7:** UX improvements (heart animation, loading skeletons, tab title, Tag Mix reshuffle)
+- **Phase 8:** Share Mix via URL
 
 ### Known issues / areas for improvement
 - SDK playback: some tracks may skip or mute if token refresh timing is off — monitor `authentication_error` events

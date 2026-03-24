@@ -96,7 +96,7 @@ A phased plan for evolving SpotiMix from a playlist generator into a standalone 
 
 ---
 
-## Phase 8: Share Mix via URL ← **UP NEXT**
+## Phase 8: Share Mix via URL
 
 **Goal:** Users can share a generated mix via a URL. Recipients open the link, log in, and get the same mix auto-generated.
 
@@ -109,32 +109,26 @@ A phased plan for evolving SpotiMix from a playlist generator into a standalone 
 
 ---
 
-## Phase 9: Hybrid Track Sourcing ← **UP NEXT**
+## Phase 9: Hybrid Track Sourcing ✅ **SHIPPED**
 
 **Goal:** Fresher mixes by blending Last.fm catalog depth with Spotify's current popularity data.
 
 **Problem:** Last.fm `artist.getTopTracks` ranks by all-time scrobble count (20+ years of data). Newer singles can't compete with catalog classics, so mixes feel skewed toward older material.
 
-**Solution:** Use Last.fm for discovery (tags, similar artists, genre connections) but add Spotify's `GET /artists/{id}/top-tracks` for the actual track selection. Spotify's popularity ranking factors in recent streaming activity.
+**Solution:** Last.fm stays as the discovery brain (tags, similar artists, genre connections). Track selection for Top Hits, Mix, and Discovery modes now uses Spotify search, which ranks by current streaming popularity.
 
-**How track modes change:**
+Note: `GET /artists/{id}/top-tracks` was removed in the February 2026 Spotify API update. Track sourcing uses `GET /search?type=track&q=artist:{name}&limit=10` instead, which returns relevance/popularity-ranked tracks and is not affected by the removal.
 
-| Mode | Current (Last.fm only) | New (hybrid) |
-|------|----------------------|--------------|
-| Top Hits | Last.fm ranks 1–10 | Spotify top tracks (freshest, most streamed now) |
-| Deep Cuts | Last.fm ranks 11–50 | Unchanged (catalog deep pulls are the point) |
+**How track modes changed:**
+
+| Mode | Before (Last.fm only) | After (hybrid) |
+|------|----------------------|----------------|
+| Top Hits | Last.fm ranks 1–10 by all-time scrobbles | Spotify search — current popularity |
+| Deep Cuts | Last.fm ranks 11–50 | Unchanged — catalog deep pulls are the point |
 | Mix | Half top, half deep from Last.fm | Half Spotify top + half Last.fm deep cuts |
-| Discovery | Similar artists' Last.fm top tracks | Similar artists' Spotify top tracks |
+| Discovery | Similar artists' Last.fm top tracks | Main artists + similar artists via Spotify search |
 
-**New function:**
-- `getSpotifyTopTracks(artistName)` in spotify.js — search → get artist ID → `/artists/{id}/top-tracks`
-
-**Modified functions:**
-- `generate()` — fetch from both sources in parallel, blend based on mode
-- `selectArtist()` — store Spotify artist ID in artist object
-- `generateTagMix()` (optional) — blend Spotify top tracks into tag-sourced pool
-
-**What stays the same:** `matchToSpotify()`, `interleaveShuffle()`, all playback, liked songs, Smart Suggest, mood presets, genre browser, liner notes
+**What stayed the same:** `matchToSpotify()` (used only for Last.fm-sourced tracks), `interleaveShuffle()`, all playback, liked songs, Smart Suggest, mood presets, genre browser, Tag Mix, liner notes
 
 ---
 

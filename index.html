@@ -193,7 +193,7 @@
   </span>
   <span>
     Built with ❤ by Manuel Matheu with <a href="https://claude.ai" target="_blank" style="color:inherit;text-decoration:underline;">Claude</a> by Anthropic
-    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v1.7</a>
+    &middot; <a href="#changelog" onclick="document.getElementById('changelog-modal').classList.add('open');return false;" style="color:inherit;text-decoration:underline;">v1.8</a>
   </span>
 </footer>
 
@@ -206,7 +206,14 @@
     </div>
     <div style="font-family:var(--font-m);font-size:11px;line-height:1.8;opacity:0.75;overflow-y:auto;flex:1;">
       <div style="margin-bottom:16px;">
-        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v1.7 &mdash; Current</div>
+        <div style="font-weight:500;color:var(--rust);margin-bottom:4px;">v1.8 &mdash; Current</div>
+        <div>&middot; Hybrid track sourcing: Top Hits and Discovery now use Spotify search (current popularity) instead of Last.fm all-time scrobbles</div>
+        <div>&middot; Mix mode blends Spotify top tracks + Last.fm deep cuts</div>
+        <div>&middot; Discovery: your artists + similar artists, all sourced from Spotify</div>
+        <div>&middot; Deep Cuts unchanged &mdash; Last.fm catalog depth is the point</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-weight:500;color:var(--fg);opacity:0.5;margin-bottom:4px;">v1.7</div>
         <div>&middot; Cloud-Synced Combos: saved artist combos persist across devices via Supabase</div>
         <div>&middot; Automatic merge + dedup on login (local + cloud)</div>
         <div>&middot; Offline-resilient: works from localStorage when Supabase is unreachable</div>
